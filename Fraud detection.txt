@@ -1,0 +1,46 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.ensemble import IsolationForest
+from sklearn.preprocessing import StandardScaler
+
+# Generate synthetic data (replace with real dataset)
+np.random.seed(42)
+data = {
+    "Transaction_ID": range(1, 201),
+    "Amount": np.concatenate((np.random.normal(100, 20, 190), np.random.normal(300, 50, 10))),  # 10 fraud cases
+    "Time_Difference": np.concatenate((np.random.normal(30, 5, 190), np.random.normal(5, 2, 10)))  # Fraud transactions occur faster
+}
+
+df = pd.DataFrame(data)
+
+# Preprocess data
+scaler = StandardScaler()
+df_scaled = scaler.fit_transform(df[["Amount", "Time_Difference"]])
+
+# Train Isolation Forest
+model = IsolationForest(n_estimators=100, contamination=0.05, random_state=42)
+df["Anomaly"] = model.fit_predict(df_scaled)
+
+# Map anomalies (-1 indicates fraud)
+df["Anomaly"] = df["Anomaly"].map({1: "Normal", -1: "Fraudulent"})
+
+# Print fraud transactions
+frauds = df[df["Anomaly"] == "Fraudulent"]
+print("Detected Fraud Transactions:\n", frauds)
+
+# Visualization
+plt.figure(figsize=(10, 6))
+colors = df["Anomaly"].map({"Normal": "blue", "Fraudulent": "red"})
+plt.scatter(df["Amount"], df["Time_Difference"], c=colors, label="Transactions")
+
+# Fix legend placement
+import matplotlib.patches as mpatches
+legend_normal = mpatches.Patch(color='blue', label='Normal')
+legend_fraud = mpatches.Patch(color='red', label='Fraudulent')
+
+plt.xlabel("Transaction Amount")
+plt.ylabel("Time Difference (minutes)")
+plt.title("Anomaly Detection in Transactions")
+plt.legend(handles=[legend_normal, legend_fraud])
+plt.show()
